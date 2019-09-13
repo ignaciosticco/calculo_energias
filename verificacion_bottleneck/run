@@ -1,0 +1,4 @@
+#!/bin/bash
+
+mpirun -np 1 /home/sticco/Documents/lammps-31Mar17/src/lmp_mpi -i base.lammps -log none #-screen none
+
