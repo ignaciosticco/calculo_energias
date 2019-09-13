@@ -20,7 +20,7 @@ class testeos(unittest.TestCase):
 		name_input = "config_test_ecin.txt"
 		name_output = "out__test_ecin.txt"
 		os.system("./calcula_energias_anillo.exe {} {} {} {}".format(name_input,name_output,vd,param_filename))
-		df=pd.read_csv("{}".format(name_output),delimiter='\t\t',engine='python')
+		df=pd.read_csv("{}".format(name_output),delimiter='\t\t',skiprows=3,engine='python')
 		self.assertEqual(float(df['avg_kinetic_energy'][0]),35.00)
 		self.assertEqual(float(df['avg_kinetic_energy'][1]),140.00)
 
@@ -29,7 +29,7 @@ class testeos(unittest.TestCase):
 		name_input = "config_test_wfg.txt"
 		name_output = "out__test_wfg.txt"
 		os.system("./calcula_energias_anillo.exe {} {} {} {}".format(name_input,name_output,vd,param_filename))
-		df=pd.read_csv("{}".format(name_output),delimiter='\t\t',engine='python')
+		df=pd.read_csv("{}".format(name_output),delimiter='\t\t',skiprows=3,engine='python')
 		self.assertEqual(float(df['work_fgranular'][0]),-21600)
 		self.assertEqual(float(df['work_fgranular'][1]),0.00)
 	
@@ -41,7 +41,7 @@ class testeos(unittest.TestCase):
 		name_input = "config_test_wfd1.txt"
 		name_output = "out__test_wfd1.txt"
 		os.system("./calcula_energias_anillo.exe {} {} {} {}".format(name_input,name_output,vd,param_filename))
-		df=pd.read_csv("{}".format(name_output),delimiter='\t\t',engine='python')		
+		df=pd.read_csv("{}".format(name_output),delimiter='\t\t',skiprows=3,engine='python')		
 		self.assertEqual(float(df['work_fdesired'][0]),-420.0)
 		self.assertEqual(float(df['work_fdesired'][1]),-840.0)
 
@@ -53,7 +53,7 @@ class testeos(unittest.TestCase):
 		name_input = "config_test_wfd2.txt"
 		name_output = "out__test_wfd2.txt"
 		os.system("./calcula_energias_anillo.exe {} {} {} {}".format(name_input,name_output,vd,param_filename))
-		df=pd.read_csv("{}".format(name_output),delimiter='\t\t',engine='python')			
+		df=pd.read_csv("{}".format(name_output),delimiter='\t\t',skiprows=3,engine='python')			
 		self.assertEqual(int(df['work_fdesired'][0]),-472) # Test down 
 		self.assertEqual(int(df['work_fdesired'][1]),-18) # Test up
 	
@@ -63,7 +63,7 @@ class testeos(unittest.TestCase):
 		name_input = "config_test_wfs.txt"
 		name_output = "out__test_wfs.txt"
 		os.system("./calcula_energias_anillo.exe {} {} {} {}".format(name_input,name_output,vd,param_filename))
-		df=pd.read_csv("{}".format(name_output),delimiter='\t\t',engine='python')			
+		df=pd.read_csv("{}".format(name_output),delimiter='\t\t',skiprows=3,engine='python')			
 
 		self.assertEqual(int(df['work_fsocial'][0]),-4946)
 		self.assertEqual(int(df['work_fsocial'][1]),-9892)
@@ -72,7 +72,7 @@ class testeos(unittest.TestCase):
 		name_input = "config_test_wfc.txt"
 		name_output = "out__test_wfc.txt"
 		os.system("./calcula_energias_anillo.exe {} {} {} {}".format(name_input,name_output,vd,param_filename))
-		df=pd.read_csv("{}".format(name_output),delimiter='\t\t',engine='python')			
+		df=pd.read_csv("{}".format(name_output),delimiter='\t\t',skiprows=3,engine='python')			
 
 		self.assertEqual(int(df['work_fcompresion'][0]),-7200)
 		self.assertEqual(int(df['work_fcompresion'][1]),-14400)

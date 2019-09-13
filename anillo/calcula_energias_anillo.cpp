@@ -11,8 +11,11 @@ por la funcion esta_en_anillo.
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
+#include <numeric>
 
 using namespace std;
+
+#define PI 3.14159265359
 
 void calcula_energia_cinetica(vector<int> &vector_id,vector<double> &vector_vx,
 	vector<double> &vector_vy,vector<double> &kinetic_energy,vector<double> & vector_x,vector<double> & vector_y);
@@ -40,12 +43,16 @@ void calcula_work_fcompresion(vector<int> &vector_id,vector<double> &vector_x,
 void calcula_compresion_force(vector<double> &vector_fcompresion,vector<double> &vector_x,
  vector<double> &vector_y, int id);
 
-void escribir( vector<double> &observable1,vector<double> &observable2,vector<double> &observable3,
+void escribir(double mean_density,double std_density,vector<double> &observable1,vector<double> &observable2,vector<double> &observable3,
 	vector<double> &observable4,vector<double> &observable5,string output_file);
 
 bool esta_en_anillo(double x, double y);
 
 void read_constants(string archivo_ctes);
+
+double function_f(double x, double y, double x_center, double y_center, double R);
+
+double calcula_std_density(vector<double> &vector_density,double mean_density);
 
 int    CANTATOMS_MAX;
 double TI,TF,XCENTER,YCENTER,L_12,L_23,KAPPA,KCOMP,XTARGET, YTARGETUP,YTARGETDOWN,INTEGRATION_STEP, MASS,A,B,MOT, DIAM,TIMESTEP,RCUT2;
@@ -54,7 +61,7 @@ double TI,TF,XCENTER,YCENTER,L_12,L_23,KAPPA,KCOMP,XTARGET, YTARGETUP,YTARGETDOW
 
 int main(int argc, char const *argv[]){
 
-	double x,y,vx,vy,id,time,diameter;
+	double x,y,vx,vy,id,time,diameter,density;
 	int cantAtoms, n_time,i;
 	string  line;
 	int    iter=0;
@@ -78,6 +85,8 @@ int main(int argc, char const *argv[]){
 	vector<double> work_fsocial(CANTATOMS_MAX+1, 0.0);
 	vector<double> work_fcompresion(CANTATOMS_MAX+1, 0.0);
 
+	vector<double> vector_density;
+
 	ifstream fileIn(archivoConfig.c_str());
 	while(fileIn.good()){
 		getline(fileIn,line,'P');
@@ -98,6 +107,7 @@ int main(int argc, char const *argv[]){
 		vector<double> vector_vy;
 		vector<double> vector_diameter;
 
+		density = 0.0;
 		i = 0;
 		while(i<cantAtoms){		
 			getline(fileIn,line,' ');
@@ -118,6 +128,11 @@ int main(int argc, char const *argv[]){
 			vector_vx.push_back(vx);
 			vector_vy.push_back(vy);	
 			vector_diameter.push_back(diameter);
+
+			double f = 0.0;
+			f = function_f(x,y,XCENTER,YCENTER,L_23);
+			density = density + f;
+
 			i++;		
 		}
 
@@ -128,13 +143,17 @@ int main(int argc, char const *argv[]){
 			calcula_work_fdesired(vector_id,vector_x, vector_y,vector_vx,vector_vy,work_fdesired,vd);
 			calcula_work_fsocial(vector_id,vector_x,vector_y,vector_vx,vector_vy,work_fsocial);
 			calcula_work_fcompresion(vector_id,vector_x,vector_y,vector_vx,vector_vy,work_fcompresion);
+			vector_density.push_back(density);
 			iter++;
 		}
 		//////////////////////////////////////////		
 	}
 	fileIn.close();
 	calcula_avg_energia_cinetica(avg_kinetic_energy,kinetic_energy,iter);
-	escribir(avg_kinetic_energy,work_fgranular,work_fdesired,work_fsocial,work_fcompresion,archivoOut);
+	double mean_density = accumulate(vector_density.begin(), vector_density.end(), 0.0)/vector_density.size(); 
+	double std_density = calcula_std_density(vector_density,mean_density);
+	escribir(mean_density,std_density,avg_kinetic_energy,work_fgranular,work_fdesired,work_fsocial,work_fcompresion,archivoOut);
+	
 }
 
 void calcula_work_fcompresion(vector<int> &vector_id,vector<double> &vector_x,
@@ -372,13 +391,15 @@ void calcula_avg_energia_cinetica(vector<double> &avg_kinetic_energy,vector<doub
 }
 
 
-void escribir( vector<double> &observable1,vector<double> &observable2,vector<double> &observable3,
+void escribir(double mean_density,double std_density,vector<double> &observable1,vector<double> &observable2,vector<double> &observable3,
 	vector<double> &observable4,vector<double> &observable5,string output_file){
 
 	char char_output_file[output_file.size() + 1];
 	strcpy(char_output_file, output_file.c_str());	
 	FILE *fp;
 	fp=fopen(char_output_file,"a");
+	fprintf(fp, "mean_density\t\tstd_density\n");
+	fprintf(fp, "%.2f\t\t%.2f\n\n",mean_density,std_density);
 	fprintf(fp, "avg_kinetic_energy\t\twork_fgranular\t\twork_fdesired\t\twork_fsocial\t\twork_fcompresion\n");
 	for (int i = 1; i < (int)observable1.size(); ++i){
 		fprintf(fp,"%.2f\t\t%.2f\t\t%.2f\t\t%.2f\t\t%.2f\n",observable1[i],observable2[i],observable3[i],
@@ -394,6 +415,32 @@ bool esta_en_anillo(double x, double y){
 	*/
 	double r = sqrt((x-XCENTER)*(x-XCENTER)+(y-YCENTER)*(y-YCENTER));
 	return (r<=L_23 && r>=L_12);
+}
+
+double function_f(double x, double y, double x_center, double y_center,double R){
+	/*
+	Formula 1:  10.1103/PhysRevE.75.046109
+	*/
+
+	double dx = x-x_center;
+	double dy = y-y_center;
+	double dist2 = dx*dx + dy*dy;
+	double area = PI*R*R;
+	double f = exp(-dist2/(R*R))/area;
+	return f;
+}
+
+double calcula_std_density(vector<double> &vector_density,double mean_density){
+
+	int    i = 0;
+	int    size_vector_density = (int)vector_density.size();
+	double num=0.0;
+	while(i<size_vector_density){
+		num += (vector_density[i]-mean_density)*(vector_density[i]-mean_density);
+		i++;
+	}
+	return  sqrt(num/(double)size_vector_density);
+
 }
 
 void read_constants(string archivo_ctes){

@@ -1,4 +1,5 @@
 En esta carpeta hay data de la verificacion que hice del calculo de las energias. 
-Levante la curva W(vd) y comprobe que me dio igual que el paper de Dorso "Morphological and dynamical aspects of the room evacuation process". 
 
-Dio bien. 
+El ejecutable esta bien si el grafico: "work_bulk.png" (resultado) tiene un comportamiento cualitativo similar al grafico "w_dorso_ok" (grafico del paper de Dorso). 
+
+Paper: "Morphological and dynamical aspects of the room evacuation process". 

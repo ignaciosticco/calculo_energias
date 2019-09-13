@@ -78,7 +78,7 @@ def main():
 	df.to_csv('sum_energies.txt', index=None, sep='\t')
 
 def suma_energias(data_energias):
-	df = pd.read_csv("{}".format(data_energias),delimiter='\t\t',engine="python") 
+	df = pd.read_csv("{}".format(data_energias),delimiter='\t\t',skiprows=3,engine="python") 
 	sum_avg_kinetic_energy=df['avg_kinetic_energy'].sum()
 	sum_work_fgranular=df["work_fgranular"].sum()
 	sum_work_fdesired=df["work_fdesired"].sum()
