@@ -132,6 +132,7 @@ int main(int argc, char const *argv[]){
 		}
 		//////////////////////////////////////////		
 	}
+	fileIn.close();
 	calcula_avg_energia_cinetica(avg_kinetic_energy,kinetic_energy,iter);
 	escribir(avg_kinetic_energy,work_fgranular,work_fdesired,work_fsocial,work_fcompresion,archivoOut);
 }
