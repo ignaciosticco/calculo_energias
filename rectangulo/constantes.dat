@@ -5,12 +5,14 @@ Poner el numero con formato apropiado (int o double)
 */
 
 CANTATOMS_MAX=6000
+YWU=22.0
+YWD=0.0
 TI=20.0
 TF=100.0
 XL=5.0
 XR=20.0
-YU=20.0
-YD=2.0
+YU=22.0
+YD=0.0
 
 KAPPA=240000.0
 KCOMP=120000.0

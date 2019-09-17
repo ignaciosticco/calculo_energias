@@ -51,9 +51,11 @@ void read_constants(string archivo_ctes);
 
 double calcula_std_density(vector<double> &vector_density,double mean_density);
 
+void calcula_wall_compresion_force(vector<double> &vector_fcompresion,
+	vector<double> &vector_x,vector<double> &vector_y,int i);
+
 int    CANTATOMS_MAX;
-double TI,TF,XL,XR,YU,YD,KAPPA,KCOMP,XTARGET, YTARGETUP,YTARGETDOWN,INTEGRATION_STEP, MASS,A,B,MOT, DIAM,TIMESTEP,RCUT2;
-//  los nombres de las funcones,seguir comentando
+double YWU,YWD,TI,TF,XL,XR,YU,YD,KAPPA,KCOMP,XTARGET, YTARGETUP,YTARGETDOWN,INTEGRATION_STEP, MASS,A,B,MOT, DIAM,TIMESTEP,RCUT2;
 
 
 int main(int argc, char const *argv[]){
@@ -163,11 +165,37 @@ void calcula_work_fcompresion(vector<int> &vector_id,vector<double> &vector_x,
 		if (esta_en_rectangulo(vector_x[i],vector_y[i])){
 			id = vector_id[i];
 			vector<double> vector_fcompresion(2,0.0);
-			calcula_compresion_force(vector_fcompresion,vector_x, vector_y,i);	
+			calcula_compresion_force(vector_fcompresion,vector_x, vector_y,i);
+			calcula_wall_compresion_force(vector_fcompresion,vector_x,vector_y,i);	
 			work_fcompresion[id]+=(vector_vx[i]*vector_fcompresion[0]+vector_vy[i]*vector_fcompresion[1])*TIMESTEP;	
 		}
 	}
 }
+
+void calcula_wall_compresion_force(vector<double> &vector_fcompresion,
+	vector<double> &vector_x,vector<double> &vector_y,int i){
+	/*
+	Calcula la fuerza de compresion que siente un individuo debido a una pared
+	Solo se contemplan 2 paredes horizontales (YU, YD) tipo corridor
+	*/
+
+	double yi;
+	double rad = DIAM/2.0;
+	double fcomp_y = 0.0;
+
+	yi = vector_y[i];
+
+	if (fabs(yi-YWU)<rad){
+		fcomp_y = -KCOMP*(rad-fabs(yi-YWU));
+	}
+	else if(fabs(yi-YWD)<rad){
+		fcomp_y = KCOMP*(rad-fabs(yi-YWD));
+	}
+
+	vector_fcompresion[1]+=fcomp_y;
+
+}
+
 
 void calcula_compresion_force(vector<double> &vector_fcompresion,
 	vector<double> &vector_x,vector<double> &vector_y,int i){
@@ -387,22 +415,6 @@ void calcula_avg_energia_cinetica(vector<double> &avg_kinetic_energy,vector<doub
 	}
 }
 
-/*
-void escribir( vector<double> &observable1,vector<double> &observable2,vector<double> &observable3,
-	vector<double> &observable4,vector<double> &observable5,string output_file){
-
-	char char_output_file[output_file.size() + 1];
-	strcpy(char_output_file, output_file.c_str());	
-	FILE *fp;
-	fp=fopen(char_output_file,"a");
-	fprintf(fp, "avg_kinetic_energy\t\twork_fgranular\t\twork_fdesired\t\twork_fsocial\t\twork_fcompresion\n");
-	for (int i = 1; i < (int)observable1.size(); ++i){
-		fprintf(fp,"%.2f\t\t%.2f\t\t%.2f\t\t%.2f\t\t%.2f\n",observable1[i],observable2[i],observable3[i],
-			observable4[i],observable5[i]);
-	}
-	fclose(fp);
-}
-*/
 
 void escribir(double mean_density,double std_density,vector<double> &observable1,vector<double> &observable2,vector<double> &observable3,
 	vector<double> &observable4,vector<double> &observable5,string output_file){
@@ -449,6 +461,12 @@ void read_constants(string archivo_ctes){
 	getline(filectes,tmp,'=');
 	getline(filectes,tmp,'\n');
 	CANTATOMS_MAX=atoi(tmp.c_str());
+	getline(filectes,tmp,'=');
+	getline(filectes,tmp,'\n');
+	YWU=atof(tmp.c_str());
+	getline(filectes,tmp,'=');
+	getline(filectes,tmp,'\n');
+	YWD=atof(tmp.c_str());
 	getline(filectes,tmp,'=');
 	getline(filectes,tmp,'\n');
 	TI=atof(tmp.c_str());

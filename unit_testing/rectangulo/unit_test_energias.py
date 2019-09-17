@@ -77,6 +77,16 @@ class testeos(unittest.TestCase):
 		self.assertEqual(int(df['work_fcompresion'][0]),-7200)
 		self.assertEqual(int(df['work_fcompresion'][1]),-14400)
 
+	def test_work_fcompresion_wall(self):
+		name_input = "config_test_wfc_wall.txt"
+		name_output = "out__test_wfc_wall.txt"
+		os.system("./calcula_energias_rectangulo.exe {} {} {} {}".format(name_input,name_output,vd,param_filename))
+		df=pd.read_csv("{}".format(name_output),delimiter='\t\t',skiprows=3,engine='python')			
+
+		self.assertEqual(int(df['work_fcompresion'][0]),-5400)
+		self.assertEqual(int(df['work_fcompresion'][1]),5400)
+
+
 
 if __name__=='__main__':
 
