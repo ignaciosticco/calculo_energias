@@ -65,6 +65,9 @@ def suma_energias(data_energias):
 	sum_work_fdesired=df["work_fdesired"].sum()
 	sum_work_fsocial=df["work_fsocial"].sum()
 	sum_work_fcompresion=df["work_fcompresion"].sum()
+	
+
+
 	return mean_density,std_density,sum_avg_kinetic_energy,sum_work_fgranular,sum_work_fdesired,sum_work_fsocial,sum_work_fcompresion
 
 

@@ -11,6 +11,8 @@ por la funcion esta_en_rectangulo.
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
+#include <numeric>
+
 
 using namespace std;
 
@@ -40,12 +42,14 @@ void calcula_work_fcompresion(vector<int> &vector_id,vector<double> &vector_x,
 void calcula_compresion_force(vector<double> &vector_fcompresion,vector<double> &vector_x,
  vector<double> &vector_y, int id);
 
-void escribir( vector<double> &observable1,vector<double> &observable2,vector<double> &observable3,
+void escribir(double mean_density,double std_density,vector<double> &observable1,vector<double> &observable2,vector<double> &observable3,
 	vector<double> &observable4,vector<double> &observable5,string output_file);
 
 bool esta_en_rectangulo(double x, double y);
 
 void read_constants(string archivo_ctes);
+
+double calcula_std_density(vector<double> &vector_density,double mean_density);
 
 int    CANTATOMS_MAX;
 double TI,TF,XL,XR,YU,YD,KAPPA,KCOMP,XTARGET, YTARGETUP,YTARGETDOWN,INTEGRATION_STEP, MASS,A,B,MOT, DIAM,TIMESTEP,RCUT2;
@@ -54,9 +58,10 @@ double TI,TF,XL,XR,YU,YD,KAPPA,KCOMP,XTARGET, YTARGETUP,YTARGETDOWN,INTEGRATION_
 
 int main(int argc, char const *argv[]){
 
-	double x,y,vx,vy,id,time,diameter;
-	int cantAtoms, n_time,i;
-	string  line;
+	double x,y,vx,vy,id,time,diameter,density,particles_in_rectange;
+	double std_density,mean_density;
+	int    cantAtoms, n_time,i;
+	string line;
 	int    iter=0;
 	
 	//////////// INPUTS ////////////////
@@ -70,6 +75,7 @@ int main(int argc, char const *argv[]){
 	string coso;
 	ifstream filectes(archivo_ctes.c_str());
 	read_constants(archivo_ctes);
+	double area_rectange = fabs(XR-XL)*fabs(YU-YD);
 
 	vector<double> kinetic_energy(CANTATOMS_MAX+1, 0.0);
 	vector<double> avg_kinetic_energy(CANTATOMS_MAX+1, 0.0);
@@ -77,6 +83,8 @@ int main(int argc, char const *argv[]){
 	vector<double> work_fdesired(CANTATOMS_MAX+1, 0.0);
 	vector<double> work_fsocial(CANTATOMS_MAX+1, 0.0);
 	vector<double> work_fcompresion(CANTATOMS_MAX+1, 0.0);
+
+	vector<double> vector_density;
 
 	ifstream fileIn(archivoConfig.c_str());
 	while(fileIn.good()){
@@ -98,6 +106,7 @@ int main(int argc, char const *argv[]){
 		vector<double> vector_vy;
 		vector<double> vector_diameter;
 
+		particles_in_rectange = 0.0;
 		i = 0;
 		while(i<cantAtoms){		
 			getline(fileIn,line,' ');
@@ -118,8 +127,12 @@ int main(int argc, char const *argv[]){
 			vector_vx.push_back(vx);
 			vector_vy.push_back(vy);	
 			vector_diameter.push_back(diameter);
+
+			if (esta_en_rectangulo(x,y))particles_in_rectange++;
 			i++;		
 		}
+		density = particles_in_rectange/area_rectange;
+
 
 		//// Calculo de energias en Bulk ////////
 		if (time>=TI && time<=TF && fileIn.good()){
@@ -128,12 +141,16 @@ int main(int argc, char const *argv[]){
 			calcula_work_fdesired(vector_id,vector_x, vector_y,vector_vx,vector_vy,work_fdesired,vd);
 			calcula_work_fsocial(vector_id,vector_x,vector_y,vector_vx,vector_vy,work_fsocial);
 			calcula_work_fcompresion(vector_id,vector_x,vector_y,vector_vx,vector_vy,work_fcompresion);
+			vector_density.push_back(density);
 			iter++;
 		}
 		//////////////////////////////////////////		
 	}
 	calcula_avg_energia_cinetica(avg_kinetic_energy,kinetic_energy,iter);
-	escribir(avg_kinetic_energy,work_fgranular,work_fdesired,work_fsocial,work_fcompresion,archivoOut);
+	mean_density = accumulate(vector_density.begin(), vector_density.end(), 0.0)/vector_density.size(); 
+	std_density = calcula_std_density(vector_density,mean_density);
+	escribir(mean_density,std_density,avg_kinetic_energy,work_fgranular,work_fdesired,work_fsocial,work_fcompresion,archivoOut);
+
 }
 
 void calcula_work_fcompresion(vector<int> &vector_id,vector<double> &vector_x,
@@ -370,7 +387,7 @@ void calcula_avg_energia_cinetica(vector<double> &avg_kinetic_energy,vector<doub
 	}
 }
 
-
+/*
 void escribir( vector<double> &observable1,vector<double> &observable2,vector<double> &observable3,
 	vector<double> &observable4,vector<double> &observable5,string output_file){
 
@@ -385,6 +402,24 @@ void escribir( vector<double> &observable1,vector<double> &observable2,vector<do
 	}
 	fclose(fp);
 }
+*/
+
+void escribir(double mean_density,double std_density,vector<double> &observable1,vector<double> &observable2,vector<double> &observable3,
+	vector<double> &observable4,vector<double> &observable5,string output_file){
+
+	char char_output_file[output_file.size() + 1];
+	strcpy(char_output_file, output_file.c_str());	
+	FILE *fp;
+	fp=fopen(char_output_file,"a");
+	fprintf(fp, "mean_density\t\tstd_density\n");
+	fprintf(fp, "%.2f\t\t%.2f\n\n",mean_density,std_density);
+	fprintf(fp, "avg_kinetic_energy\t\twork_fgranular\t\twork_fdesired\t\twork_fsocial\t\twork_fcompresion\n");
+	for (int i = 1; i < (int)observable1.size(); ++i){
+		fprintf(fp,"%.2f\t\t%.2f\t\t%.2f\t\t%.2f\t\t%.2f\n",observable1[i],observable2[i],observable3[i],
+			observable4[i],observable5[i]);
+	}
+	fclose(fp);
+}
 
 bool esta_en_rectangulo(double x, double y){
 	/*
@@ -392,6 +427,19 @@ bool esta_en_rectangulo(double x, double y){
 	Los parametros del rectangulo se pasan con el archivo de constantes
 	*/
 	return (x<=XR && x>=XL && y<=YU && y>=YD);
+}
+
+double calcula_std_density(vector<double> &vector_density,double mean_density){
+
+	int    i = 0;
+	int    size_vector_density = (int)vector_density.size();
+	double num=0.0;
+	while(i<size_vector_density){
+		num += (vector_density[i]-mean_density)*(vector_density[i]-mean_density);
+		i++;
+	}
+	return  sqrt(num/(double)size_vector_density);
+
 }
 
 void read_constants(string archivo_ctes){
