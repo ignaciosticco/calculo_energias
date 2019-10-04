@@ -54,6 +54,13 @@ double calcula_std_density(vector<double> &vector_density,double mean_density);
 void calcula_wall_compresion_force(vector<double> &vector_fcompresion,
 	vector<double> &vector_x,vector<double> &vector_y,int i);
 
+void calcula_wall_granular_force(vector<double> &vector_fg,vector<double> &vector_x, 
+	vector<double> &vector_y, vector<double> &vector_vx,vector<double> &vector_vy, int i);
+
+void calcula_wall_social_force(vector<double> &vector_fsocial,vector<double> &vector_x,
+ vector<double> &vector_y, vector<double> &vector_vx,vector<double> &vector_vy,int i);
+
+
 int    CANTATOMS_MAX;
 double YWU,YWD,TI,TF,XL,XR,YU,YD,KAPPA,KCOMP,XTARGET, YTARGETUP,YTARGETDOWN,INTEGRATION_STEP, MASS,A,B,MOT, DIAM,TIMESTEP,RCUT2;
 
@@ -172,29 +179,6 @@ void calcula_work_fcompresion(vector<int> &vector_id,vector<double> &vector_x,
 	}
 }
 
-void calcula_wall_compresion_force(vector<double> &vector_fcompresion,
-	vector<double> &vector_x,vector<double> &vector_y,int i){
-	/*
-	Calcula la fuerza de compresion que siente un individuo debido a una pared
-	Solo se contemplan 2 paredes horizontales (YU, YD) tipo corridor
-	*/
-
-	double yi;
-	double rad = DIAM/2.0;
-	double fcomp_y = 0.0;
-
-	yi = vector_y[i];
-
-	if (fabs(yi-YWU)<rad){
-		fcomp_y = -KCOMP*(rad-fabs(yi-YWU));
-	}
-	else if(fabs(yi-YWD)<rad){
-		fcomp_y = KCOMP*(rad-fabs(yi-YWD));
-	}
-
-	vector_fcompresion[1]+=fcomp_y;
-
-}
 
 
 void calcula_compresion_force(vector<double> &vector_fcompresion,
@@ -225,6 +209,30 @@ void calcula_compresion_force(vector<double> &vector_fcompresion,
 	}
 }
 
+void calcula_wall_compresion_force(vector<double> &vector_fcompresion,
+	vector<double> &vector_x,vector<double> &vector_y,int i){
+	/*
+	Calcula la fuerza de compresion que siente un individuo debido a una pared
+	Solo se contemplan 2 paredes horizontales (YU, YD) tipo corridor
+	*/
+
+	double yi;
+	double rad = DIAM/2.0;
+	double fcomp_y = 0.0;
+
+	yi = vector_y[i];
+
+	if (fabs(yi-YWU)<rad){
+		fcomp_y = -KCOMP*(rad-fabs(yi-YWU));
+	}
+	else if(fabs(yi-YWD)<rad){
+		fcomp_y = KCOMP*(rad-fabs(yi-YWD));
+	}
+
+	vector_fcompresion[1]+=fcomp_y;
+
+}
+
 
 void calcula_work_fsocial(vector<int> &vector_id,vector<double> &vector_x,
  vector<double> &vector_y,vector<double> &vector_vx,vector<double> &vector_vy,vector<double> &work_fsocial){
@@ -236,6 +244,7 @@ void calcula_work_fsocial(vector<int> &vector_id,vector<double> &vector_x,
 			id = vector_id[i];
 			vector<double> vector_fsocial(2,0.0);
 			calcula_social_force(vector_fsocial,vector_x, vector_y, vector_vx,vector_vy, i);
+			calcula_wall_social_force(vector_fsocial,vector_x, vector_y, vector_vx,vector_vy, i);
 			work_fsocial[id]+=(vector_vx[i]*vector_fsocial[0]+vector_vy[i]*vector_fsocial[1])*TIMESTEP;	
 		}
 	}
@@ -267,6 +276,29 @@ void calcula_social_force(vector<double> &vector_fsocial,vector<double> &vector_
 		}
 		j++;
 	}
+}
+
+
+void calcula_wall_social_force(vector<double> &vector_fsocial,vector<double> &vector_x,
+ vector<double> &vector_y, vector<double> &vector_vx,vector<double> &vector_vy,int i){
+
+	double yi,r,fpair;
+	double fs_y = 0.0;
+	double rad = DIAM/2.0;
+
+	yi = vector_y[i];
+
+	if (fabs(yi-YWU)*fabs(yi-YWU)<RCUT2){
+		r = fabs(yi-YWU);	
+		fpair = A*exp((rad-r)/B);
+      	fs_y= -fpair;
+	}
+	else if(fabs(yi-YWD)*fabs(yi-YWD)<RCUT2){
+		r = fabs(yi-YWD);	
+		fpair = A*exp((rad-r)/B);
+      	fs_y = fpair;
+	}
+	vector_fsocial[1]+=fs_y;
 }
 
 void calcula_work_fdesired(vector<int> &vector_id,vector<double> &vector_x,
@@ -347,6 +379,7 @@ void calcula_work_fgranular(vector<int> &vector_id,vector<double> &vector_x, vec
 			id = vector_id[i];
 			vector<double> vector_fg(2,0.0);
 			calcula_granular_force(vector_fg,vector_x, vector_y, vector_vx,vector_vy, i);
+			calcula_wall_granular_force(vector_fg,vector_x, vector_y, vector_vx,vector_vy, i);			
 			work_fgranular[id]+=(vector_vx[i]*vector_fg[0]+vector_vy[i]*vector_fg[1])*TIMESTEP;	
 		}
 	}
@@ -386,6 +419,29 @@ void calcula_granular_force(vector<double> &vector_fg,vector<double> &vector_x,
 		}
 		j++;
 	}
+}
+
+void calcula_wall_granular_force(vector<double> &vector_fg,vector<double> &vector_x, 
+	vector<double> &vector_y, vector<double> &vector_vx,vector<double> &vector_vy, int i){
+
+	double yi,vxi,dely,gpair;
+	double rad = DIAM/2.0;
+	double fg_x = 0.0;
+
+	yi = vector_y[i];
+	vxi = vector_vx[i];
+
+	if (fabs(yi-YWU)<rad){
+		dely = fabs(yi-YWU);
+		gpair = rad - dely;
+		fg_x =-KAPPA*gpair*vxi; 
+	}
+	else if(fabs(yi-YWD)<rad){
+		dely = fabs(yi-YWD);
+		gpair = rad - dely;
+		fg_x =-KAPPA*gpair*vxi; 
+	}
+	vector_fg[0]+=fg_x;
 }
 
 void calcula_energia_cinetica(vector<int> &vector_id,vector<double> &vector_vx,

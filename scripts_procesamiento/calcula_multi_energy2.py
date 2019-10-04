@@ -12,12 +12,12 @@ import math
 def main():
 
 	# WARNING: elimina todos los archivos que comiencen con "energias_bulk"
-	os.system("rm energias_* ")
+	#os.system("rm energias_* ")
 
 	# Escribir lista de densidades gloabales correspondientes a las config. 
-	list_dens_global =  [1,2]  
+	list_dens_global = [0.5,0.75,1,1.25,1.5,1.75,2,2.25,2.5,2.75,3,3.25,3.5,3.75,4,4.25,4.5,4.75,5,5.25,5.5,5.75,6,6.25,6.5,6.75,7,7.25,7.5,7.75,8,8.25,8.5,8.75,9]
 	vd = 1
-	clase = "test"  
+	clase = "knE5_rectangulo_all"  
 	file_constname = "constantes.dat"
 
 	list_dens_local = []
@@ -28,9 +28,9 @@ def main():
 	list_wfs = []
 	list_wfc = []
 	for density in list_dens_global:
-		name_input = "config_bottleneck_verific_vd{}_N225".format(density)
+		#name_input = "config_bottleneck_verific_vd{}_N225".format(density)
 		name_output = "energias_corridor_density{}_{}".format(density,clase)
-		os.system("./calcula_energias_anillo.exe {} {} {} {}".format(name_input,name_output,density,file_constname))
+		#os.system("./calcula_energias_anillo.exe {} {} {} {}".format(name_input,name_output,density,file_constname))
 		promedia_energies =  promedia_energias(name_output)
 		list_dens_local += [promedia_energies[0]]
 		list_std_density += [promedia_energies[1]]
@@ -47,7 +47,8 @@ def main():
 	df['list_wfd']  = np.round(list_wfd,2)
 	df['list_wfs']  = np.round(list_wfs,2)
 	df['list_wfc']  = np.round(list_wfc,2)
-	df.to_csv('promedia_energies_{}.txt'.format(clase), index=None, sep='\t')
+	df.fillna(0, inplace=True)
+	df.to_csv('energy_per_particle_{}.txt'.format(clase), index=None, sep='\t')
 
 def promedia_energias(data_energias):
 	'''

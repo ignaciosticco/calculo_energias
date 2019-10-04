@@ -86,6 +86,31 @@ class testeos(unittest.TestCase):
 		self.assertEqual(int(df['work_fcompresion'][0]),-5400)
 		self.assertEqual(int(df['work_fcompresion'][1]),5400)
 
+	def test_work_fgranular_wall(self):
+		name_input = "config_test_wfg_wall.txt"
+		name_output = "out__test_wfg_wall.txt"
+		os.system("./calcula_energias_rectangulo.exe {} {} {} {}".format(name_input,name_output,vd,param_filename))
+		df=pd.read_csv("{}".format(name_output),delimiter='\t\t',skiprows=3,engine='python')			
+
+		self.assertEqual(int(df['work_fgranular'][0]),-10800)
+		self.assertEqual(int(df['work_fgranular'][1]),-43200)
+
+	def test_work_fsocial_wall(self):
+		name_input = "config_test_wfs_wall.txt"
+		name_output = "out__test_wfs_wall.txt"
+		os.system("./calcula_energias_rectangulo.exe {} {} {} {}".format(name_input,name_output,vd,param_filename))
+		df=pd.read_csv("{}".format(name_output),delimiter='\t\t',skiprows=3,engine='python')			
+
+		self.assertEqual(int(df['work_fsocial'][0]),-8729)
+		self.assertEqual(int(df['work_fsocial'][1]),-4364)
+
+	def test_density(self):
+		name_input = "config_test_density.txt"
+		name_output = "out__test_density.txt"
+		os.system("./calcula_energias_rectangulo.exe {} {} {} {}".format(name_input,name_output,vd,param_filename))
+		df_header = pd.read_csv("{}".format(name_output), nrows=1,delimiter='\t\t',engine="python")
+
+		self.assertEqual(df_header['mean_density'][0],0.01)
 
 
 if __name__=='__main__':
@@ -100,6 +125,8 @@ if __name__=='__main__':
 Estos son los parametros para los cuales se penso este testing
 
 CANTATOMS_MAX=6000
+YWU=50.0
+YWD=-50.0
 TI=0.0
 TF=1.5
 XL=0.0

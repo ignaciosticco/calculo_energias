@@ -50,19 +50,27 @@ bool esta_en_anillo(double x, double y);
 
 void read_constants(string archivo_ctes);
 
-double function_f(double x, double y, double x_center, double y_center, double R);
-
 double calcula_std_density(vector<double> &vector_density,double mean_density);
 
+void calcula_wall_compresion_force(vector<double> &vector_fcompresion,
+	vector<double> &vector_x,vector<double> &vector_y,int i);
+
+
+void calcula_wall_granular_force(vector<double> &vector_fg,vector<double> &vector_x, 
+	vector<double> &vector_y, vector<double> &vector_vx,vector<double> &vector_vy, int i);
+
+void calcula_wall_social_force(vector<double> &vector_fsocial,vector<double> &vector_x,
+ vector<double> &vector_y, vector<double> &vector_vx,vector<double> &vector_vy,int i);
+
 int    CANTATOMS_MAX;
-double TI,TF,XCENTER,YCENTER,L_12,L_23,KAPPA,KCOMP,XTARGET, YTARGETUP,YTARGETDOWN,INTEGRATION_STEP, MASS,A,B,MOT, DIAM,TIMESTEP,RCUT2;
+double TI,TF,XCENTER,YCENTER,L_12,L_23,KAPPA,KCOMP,XTARGET, YTARGETUP,YTARGETDOWN,INTEGRATION_STEP, MASS,A,B,MOT, DIAM,TIMESTEP,RCUT2,YWU,YWD;
 
 
 
 int main(int argc, char const *argv[]){
 
 	double x,y,vx,vy,id,time,diameter,density;
-	int cantAtoms, n_time,i;
+	int cantAtoms, n_time,i,particles_in_ring;
 	string  line;
 	int    iter=0;
 	
@@ -74,9 +82,9 @@ int main(int argc, char const *argv[]){
 	////////////////////////////////////
 
 	string archivo_ctes=argv[4];
-	string coso;
 	ifstream filectes(archivo_ctes.c_str());
 	read_constants(archivo_ctes);
+	double area_ring = (PI*L_23*L_23)-(PI*L_12*L_12 );
 
 	vector<double> kinetic_energy(CANTATOMS_MAX+1, 0.0);
 	vector<double> avg_kinetic_energy(CANTATOMS_MAX+1, 0.0);
@@ -108,6 +116,7 @@ int main(int argc, char const *argv[]){
 		vector<double> vector_diameter;
 
 		density = 0.0;
+		particles_in_ring = 0;
 		i = 0;
 		while(i<cantAtoms){		
 			getline(fileIn,line,' ');
@@ -129,12 +138,10 @@ int main(int argc, char const *argv[]){
 			vector_vy.push_back(vy);	
 			vector_diameter.push_back(diameter);
 
-			double f = 0.0;
-			f = function_f(x,y,XCENTER,YCENTER,L_23);
-			density = density + f;
-
+			if (esta_en_anillo(x,y))particles_in_ring++;
 			i++;		
 		}
+		density = particles_in_ring/area_ring;
 
 		//// Calculo de energias en Bulk ////////
 		if (time>=TI && time<=TF && fileIn.good()){
@@ -167,6 +174,7 @@ void calcula_work_fcompresion(vector<int> &vector_id,vector<double> &vector_x,
 			id = vector_id[i];
 			vector<double> vector_fcompresion(2,0.0);
 			calcula_compresion_force(vector_fcompresion,vector_x, vector_y,i);	
+			calcula_wall_compresion_force(vector_fcompresion,vector_x,vector_y,i);
 			work_fcompresion[id]+=(vector_vx[i]*vector_fcompresion[0]+vector_vy[i]*vector_fcompresion[1])*TIMESTEP;	
 		}
 	}
@@ -201,6 +209,31 @@ void calcula_compresion_force(vector<double> &vector_fcompresion,
 }
 
 
+
+void calcula_wall_compresion_force(vector<double> &vector_fcompresion,
+	vector<double> &vector_x,vector<double> &vector_y,int i){
+	/*
+	Calcula la fuerza de compresion que siente un individuo debido a una pared
+	Solo se contemplan 2 paredes horizontales (YU, YD) tipo corridor
+	*/
+
+	double yi;
+	double rad = DIAM/2.0;
+	double fcomp_y = 0.0;
+
+	yi = vector_y[i];
+
+	if (fabs(yi-YWU)<rad){
+		fcomp_y = -KCOMP*(rad-fabs(yi-YWU));
+	}
+	else if(fabs(yi-YWD)<rad){
+		fcomp_y = KCOMP*(rad-fabs(yi-YWD));
+	}
+
+	vector_fcompresion[1]+=fcomp_y;
+
+}
+
 void calcula_work_fsocial(vector<int> &vector_id,vector<double> &vector_x,
  vector<double> &vector_y,vector<double> &vector_vx,vector<double> &vector_vy,vector<double> &work_fsocial){
 
@@ -211,6 +244,7 @@ void calcula_work_fsocial(vector<int> &vector_id,vector<double> &vector_x,
 			id = vector_id[i];
 			vector<double> vector_fsocial(2,0.0);
 			calcula_social_force(vector_fsocial,vector_x, vector_y, vector_vx,vector_vy, i);
+			calcula_wall_social_force(vector_fsocial,vector_x, vector_y, vector_vx,vector_vy, i);
 			work_fsocial[id]+=(vector_vx[i]*vector_fsocial[0]+vector_vy[i]*vector_fsocial[1])*TIMESTEP;	
 		}
 	}
@@ -242,6 +276,28 @@ void calcula_social_force(vector<double> &vector_fsocial,vector<double> &vector_
 		}
 		j++;
 	}
+}
+
+void calcula_wall_social_force(vector<double> &vector_fsocial,vector<double> &vector_x,
+ vector<double> &vector_y, vector<double> &vector_vx,vector<double> &vector_vy,int i){
+
+	double yi,r,fpair;
+	double fs_y = 0.0;
+	double rad = DIAM/2.0;
+
+	yi = vector_y[i];
+
+	if (fabs(yi-YWU)*fabs(yi-YWU)<RCUT2){
+		r = fabs(yi-YWU);	
+		fpair = A*exp((rad-r)/B);
+      	fs_y= -fpair;
+	}
+	else if(fabs(yi-YWD)*fabs(yi-YWD)<RCUT2){
+		r = fabs(yi-YWD);	
+		fpair = A*exp((rad-r)/B);
+      	fs_y = fpair;
+	}
+	vector_fsocial[1]+=fs_y;
 }
 
 void calcula_work_fdesired(vector<int> &vector_id,vector<double> &vector_x,
@@ -322,6 +378,7 @@ void calcula_work_fgranular(vector<int> &vector_id,vector<double> &vector_x, vec
 			id = vector_id[i];
 			vector<double> vector_fg(2,0.0);
 			calcula_granular_force(vector_fg,vector_x, vector_y, vector_vx,vector_vy, i);
+			calcula_wall_granular_force(vector_fg,vector_x, vector_y, vector_vx,vector_vy, i);
 			work_fgranular[id]+=(vector_vx[i]*vector_fg[0]+vector_vy[i]*vector_fg[1])*TIMESTEP;	
 		}
 	}
@@ -361,6 +418,30 @@ void calcula_granular_force(vector<double> &vector_fg,vector<double> &vector_x,
 		}
 		j++;
 	}
+}
+
+
+void calcula_wall_granular_force(vector<double> &vector_fg,vector<double> &vector_x, 
+	vector<double> &vector_y, vector<double> &vector_vx,vector<double> &vector_vy, int i){
+
+	double yi,vxi,dely,gpair;
+	double rad = DIAM/2.0;
+	double fg_x = 0.0;
+
+	yi = vector_y[i];
+	vxi = vector_vx[i];
+
+	if (fabs(yi-YWU)<rad){
+		dely = fabs(yi-YWU);
+		gpair = rad - dely;
+		fg_x =-KAPPA*gpair*vxi; 
+	}
+	else if(fabs(yi-YWD)<rad){
+		dely = fabs(yi-YWD);
+		gpair = rad - dely;
+		fg_x =-KAPPA*gpair*vxi; 
+	}
+	vector_fg[0]+=fg_x;
 }
 
 void calcula_energia_cinetica(vector<int> &vector_id,vector<double> &vector_vx,
@@ -417,18 +498,6 @@ bool esta_en_anillo(double x, double y){
 	return (r<=L_23 && r>=L_12);
 }
 
-double function_f(double x, double y, double x_center, double y_center,double R){
-	/*
-	Formula 1:  10.1103/PhysRevE.75.046109
-	*/
-
-	double dx = x-x_center;
-	double dy = y-y_center;
-	double dist2 = dx*dx + dy*dy;
-	double area = PI*R*R;
-	double f = exp(-dist2/(R*R))/area;
-	return f;
-}
 
 double calcula_std_density(vector<double> &vector_density,double mean_density){
 
@@ -450,6 +519,12 @@ void read_constants(string archivo_ctes){
 	getline(filectes,tmp,'=');
 	getline(filectes,tmp,'\n');
 	CANTATOMS_MAX=atoi(tmp.c_str());
+	getline(filectes,tmp,'=');
+	getline(filectes,tmp,'\n');
+	YWU=atof(tmp.c_str());
+	getline(filectes,tmp,'=');
+	getline(filectes,tmp,'\n');
+	YWD=atof(tmp.c_str());
 	getline(filectes,tmp,'=');
 	getline(filectes,tmp,'\n');
 	TI=atof(tmp.c_str());

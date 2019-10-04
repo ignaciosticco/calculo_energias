@@ -46,7 +46,8 @@ pylab.rcParams.update(params)
 
 def main():
 
-	df = pd.read_csv('sum_energies_test.txt',delimiter = '\t') 
+	df = pd.read_csv('sum_energies_knE5_rectangulo_all',delimiter = '\t') 
+	clase = 'test'
 
 	list_dens_local=df['list_dens_local'].tolist()
 	list_ecin=df['list_ecin'].tolist()
@@ -54,15 +55,15 @@ def main():
 	list_wfd=df['list_wfd'].tolist()
 	list_wfs=df['list_wfs'].tolist()
 	list_wfc=df['list_wfc'].tolist()
-	plot_energies_all(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc)
-	plot_ecin(list_dens_local,list_ecin)
-	plot_sum_energies(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc)
-	plot_energies_ignoring(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc,"list_wfg")
-	plot_energies_ignoring(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc,"list_wfc")
-	plot_energies_ignoring(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc,"list_wfs")
+	plot_energies_all(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc,clase)
+	plot_ecin(list_dens_local,list_ecin,clase)
+	plot_sum_energies(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc,clase)
+	plot_energies_ignoring(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc,"list_wfg",clase)
+	plot_energies_ignoring(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc,"list_wfc",clase)
+	plot_energies_ignoring(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc,"list_wfs",clase)
 
 
-def plot_energies_all(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc):
+def plot_energies_all(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc,clase):
 
 	plt.cla()	
 	plt.plot(list_dens_local,list_wfd,'b-+',mew=0.7,linewidth = '1',markersize=5,label='Desire') 
@@ -77,10 +78,10 @@ def plot_energies_all(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc):
 	plt.ticklabel_format(style='sci', axis='y')
 	lgd=plt.legend(numpoints=1,handlelength=0.8) 
 	plt.legend(frameon=False,loc='best',labelspacing=-0.1,borderpad=0.3,handletextpad=0.5,fontsize=6,numpoints=1) 
-	pylab.savefig('all_work_circulo_r1m_knE5.png'.format(), format='png', dpi=300, bbox_inches='tight')
+	pylab.savefig('all_works_{}.png'.format(clase), format='png', dpi=300, bbox_inches='tight')
 
 
-def plot_energies_ignoring(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc,ignore):
+def plot_energies_ignoring(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc,ignore,clase):
 	'''
 	Grafica la energia total ignorando la contribucion de un tipo de trabajo 
 	Esta contribucion se pasa con la variable ignore. 
@@ -116,10 +117,10 @@ def plot_energies_ignoring(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc,i
 	plt.ticklabel_format(style='sci', axis='y')
 	#lgd=plt.legend(numpoints=1,handlelength=0.8) 
 	#plt.legend(frameon=False,loc='best',labelspacing=-0.1,borderpad=0.3,handletextpad=0.5,fontsize=6,numpoints=1) 
-	pylab.savefig('work_ignore_{}_knE5.png'.format(ignore), format='png', dpi=300, bbox_inches='tight')
+	pylab.savefig('work_ignore_{}_{}.png'.format(ignore,clase), format='png', dpi=300, bbox_inches='tight')
 
 
-def plot_sum_energies(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc):
+def plot_sum_energies(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc,clase):
 	'''
 	Suma todas las energias y la grafica vs la densidad
 	'''
@@ -133,9 +134,9 @@ def plot_sum_energies(list_dens_local,list_wfg,list_wfd,list_wfs,list_wfc):
 	pylab.ylabel('Total Work~(J)')
 	#plt.axis([0, 9.5, -1e7, 1.2e7])
 	plt.ticklabel_format(style='sci', axis='y')
-	pylab.savefig('sum_work_knE5.png', format='png', dpi=300, bbox_inches='tight')
+	pylab.savefig('total_work_{}.png'.format(clase), format='png', dpi=300, bbox_inches='tight')
 
-def plot_ecin(list_dens_local,list_ecin):
+def plot_ecin(list_dens_local,list_ecin,clase):
 
 	plt.cla()
 	plt.plot(list_dens_local,list_ecin,'k-o',mfc='w',mew=0.7,linewidth = '1',markersize=5) 	
@@ -144,7 +145,7 @@ def plot_ecin(list_dens_local,list_ecin):
 	pylab.ylabel('Kinetic Energy~(J)')
 	#plt.axis([0, 9.5, -1e7, 1.2e7])
 	plt.ticklabel_format(style='sci', axis='y')
-	pylab.savefig('kinetic_energy_knE5.png', format='png', dpi=300, bbox_inches='tight')
+	pylab.savefig('kinetic_energy_{}.png'.format(clase), format='png', dpi=300, bbox_inches='tight')
 
 
 
