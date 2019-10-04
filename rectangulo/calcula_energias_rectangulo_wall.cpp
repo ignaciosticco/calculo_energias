@@ -1,7 +1,7 @@
 /*
+Only calculates the Work associated to the walls
 Input: Lammps configuration dump with: id x y vx vy diameter
 Output: For each pedestrians returns the wall works along the trajectory. 
-It only calculates the works related to the walls
 Calcula la energia de todas las particulas que estan en la region determinada
 por la funcion esta_en_rectangulo. 
 
@@ -126,6 +126,7 @@ int main(int argc, char const *argv[]){
 
 		//// Calculo de energias en Bulk ////////
 		if (time>=TI && time<=TF && fileIn.good()){
+
 			calcula_work_fgranular(vector_id,vector_x, vector_y,vector_vx,vector_vy,work_fgranular);
 			calcula_work_fsocial(vector_id,vector_x,vector_y,vector_vx,vector_vy,work_fsocial);
 			calcula_work_fcompresion(vector_id,vector_x,vector_y,vector_vx,vector_vy,work_fcompresion);
@@ -152,6 +153,7 @@ void calcula_work_fcompresion(vector<int> &vector_id,vector<double> &vector_x,
 			vector<double> vector_fcompresion(2,0.0);
 			calcula_wall_compresion_force(vector_fcompresion,vector_x,vector_y,i);	
 			work_fcompresion[id]+=(vector_vx[i]*vector_fcompresion[0]+vector_vy[i]*vector_fcompresion[1])*TIMESTEP;	
+			
 		}
 	}
 }
