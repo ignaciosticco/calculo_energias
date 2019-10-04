@@ -18,34 +18,16 @@ por la funcion esta_en_rectangulo.
 
 using namespace std;
 
-void calcula_energia_cinetica(vector<int> &vector_id,vector<double> &vector_vx,
-	vector<double> &vector_vy,vector<double> &kinetic_energy,vector<double> & vector_x,vector<double> & vector_y);
-
-void calcula_avg_energia_cinetica(vector<double> &avg_kinetic_energy,
-	vector<double> &kinetic_energy,int iter);
-
 void calcula_work_fgranular(vector<int> &vector_id,vector<double> &vector_x, 
 	vector<double> &vector_y,vector<double> &vector_vx,vector<double> &vector_vy,vector<double> &work_fg);
-void calcula_granular_force(vector<double> &vector_fg,vector<double> &vector_x,
- vector<double> &vector_y, vector<double> &vector_vx,vector<double> &vector_vy,int id);
-
-void calcula_work_fdesired(vector<int> &vector_id,vector<double> &vector_x,
- vector<double> &vector_y,vector<double> &vector_vx,vector<double> &vector_vy,vector<double> &work_fd,double vd);
-void calcula_desired_force(vector<double> &force_desired,
-	double xi,double yi,double vxi,double vyi,double vd);
 
 void calcula_work_fsocial(vector<int> &vector_id,vector<double> &vector_x,
  vector<double> &vector_y,vector<double> &vector_vx,vector<double> &vector_vy,vector<double> &work_fs);
-void calcula_social_force(vector<double> &vector_fsocial,vector<double> &vector_x,
- vector<double> &vector_y, vector<double> &vector_vx,vector<double> &vector_vy,int i);
 
 void calcula_work_fcompresion(vector<int> &vector_id,vector<double> &vector_x, 
 	vector<double> &vector_y,vector<double> &vector_vx,vector<double> &vector_vy,vector<double> &work_fcompresion);
-void calcula_compresion_force(vector<double> &vector_fcompresion,vector<double> &vector_x,
- vector<double> &vector_y, int id);
 
-void escribir(double mean_density,double std_density,vector<double> &observable1,vector<double> &observable2,vector<double> &observable3,
-	vector<double> &observable4,vector<double> &observable5,string output_file);
+void escribir(double mean_density,double std_density,vector<double> &observable1,vector<double> &observable2,vector<double> &observable3,string output_file);
 
 bool esta_en_rectangulo(double x, double y);
 
@@ -78,8 +60,8 @@ int main(int argc, char const *argv[]){
 	//////////// INPUTS ////////////////
 	string archivoConfig=argv[1];
 	string archivoOut=argv[2];
-	string vds =  argv[3];
-	double vd = atof(vds.c_str());
+	string vds =  argv[3]; // No es necesario pero lo dejo para no cambiar codigo de post-procesamiento
+	double vd = atof(vds.c_str()); 	
 	////////////////////////////////////
 
 	string archivo_ctes=argv[4];
@@ -88,10 +70,7 @@ int main(int argc, char const *argv[]){
 	read_constants(archivo_ctes);
 	double area_rectange = fabs(XR-XL)*fabs(YU-YD);
 
-	vector<double> kinetic_energy(CANTATOMS_MAX+1, 0.0);
-	vector<double> avg_kinetic_energy(CANTATOMS_MAX+1, 0.0);
 	vector<double> work_fgranular(CANTATOMS_MAX+1, 0.0);
-	vector<double> work_fdesired(CANTATOMS_MAX+1, 0.0);
 	vector<double> work_fsocial(CANTATOMS_MAX+1, 0.0);
 	vector<double> work_fcompresion(CANTATOMS_MAX+1, 0.0);
 
@@ -147,9 +126,7 @@ int main(int argc, char const *argv[]){
 
 		//// Calculo de energias en Bulk ////////
 		if (time>=TI && time<=TF && fileIn.good()){
-			calcula_energia_cinetica(vector_id,vector_vx,vector_vy,kinetic_energy,vector_x, vector_y);
 			calcula_work_fgranular(vector_id,vector_x, vector_y,vector_vx,vector_vy,work_fgranular);
-			calcula_work_fdesired(vector_id,vector_x, vector_y,vector_vx,vector_vy,work_fdesired,vd);
 			calcula_work_fsocial(vector_id,vector_x,vector_y,vector_vx,vector_vy,work_fsocial);
 			calcula_work_fcompresion(vector_id,vector_x,vector_y,vector_vx,vector_vy,work_fcompresion);
 			vector_density.push_back(density);
@@ -157,10 +134,9 @@ int main(int argc, char const *argv[]){
 		}
 		//////////////////////////////////////////		
 	}
-	calcula_avg_energia_cinetica(avg_kinetic_energy,kinetic_energy,iter);
 	mean_density = accumulate(vector_density.begin(), vector_density.end(), 0.0)/vector_density.size(); 
 	std_density = calcula_std_density(vector_density,mean_density);
-	escribir(mean_density,std_density,avg_kinetic_energy,work_fgranular,work_fdesired,work_fsocial,work_fcompresion,archivoOut);
+	escribir(mean_density,std_density,work_fgranular,work_fsocial,work_fcompresion,archivoOut);
 
 }
 
@@ -174,42 +150,12 @@ void calcula_work_fcompresion(vector<int> &vector_id,vector<double> &vector_x,
 		if (esta_en_rectangulo(vector_x[i],vector_y[i])){
 			id = vector_id[i];
 			vector<double> vector_fcompresion(2,0.0);
-			calcula_compresion_force(vector_fcompresion,vector_x, vector_y,i);
 			calcula_wall_compresion_force(vector_fcompresion,vector_x,vector_y,i);	
 			work_fcompresion[id]+=(vector_vx[i]*vector_fcompresion[0]+vector_vy[i]*vector_fcompresion[1])*TIMESTEP;	
 		}
 	}
 }
 
-
-
-void calcula_compresion_force(vector<double> &vector_fcompresion,
-	vector<double> &vector_x,vector<double> &vector_y,int i){
- 
-	double xi,yi,xj,yj,delx,dely,r,gpair,rsq,compresion_factor;
-	double sum_rads = DIAM;
-
-	xi = vector_x[i];
-	yi = vector_y[i];
-	int j = 0;
-	while(j<(int)vector_x.size()){
-		xj = vector_x[j];
-		yj = vector_y[j];
-		delx = xi-xj;
-		dely = yi-yj;
-	
-		rsq = delx*delx+dely*dely;
-
-		if (rsq<(sum_rads*sum_rads) && rsq>0.0 ){
-			r = sqrt(rsq);	
-			gpair = sum_rads - r;
-			compresion_factor = KCOMP*gpair/r; 
-	      	vector_fcompresion[0] += compresion_factor*delx; 
-	      	vector_fcompresion[1] += compresion_factor*dely;
-		}
-		j++;
-	}
-}
 
 void calcula_wall_compresion_force(vector<double> &vector_fcompresion,
 	vector<double> &vector_x,vector<double> &vector_y,int i){
@@ -245,40 +191,12 @@ void calcula_work_fsocial(vector<int> &vector_id,vector<double> &vector_x,
 		if (esta_en_rectangulo(vector_x[i],vector_y[i])){
 			id = vector_id[i];
 			vector<double> vector_fsocial(2,0.0);
-			calcula_social_force(vector_fsocial,vector_x, vector_y, vector_vx,vector_vy, i);
 			calcula_wall_social_force(vector_fsocial,vector_x, vector_y, vector_vx,vector_vy, i);
 			work_fsocial[id]+=(vector_vx[i]*vector_fsocial[0]+vector_vy[i]*vector_fsocial[1])*TIMESTEP;	
 		}
 	}
 }
 
-
-void calcula_social_force(vector<double> &vector_fsocial,vector<double> &vector_x,
- vector<double> &vector_y, vector<double> &vector_vx,vector<double> &vector_vy,int i){
-
-	double xi,yi,xj,yj,delx,dely,r,rsq,fpair;
-	double sum_rads = DIAM;
-
-	xi = vector_x[i];
-	yi = vector_y[i];
-	int j = 0;
-	while(j<(int)vector_x.size()){
-		xj = vector_x[j];
-		yj = vector_y[j];
-		delx = xi-xj;
-		dely = yi-yj;
-	
-		rsq = delx*delx+dely*dely;
-
-		if (rsq<RCUT2 && rsq>0.0 ){
-			r = sqrt(rsq);	
-			fpair = A*exp((sum_rads-r)/B);
-	      	vector_fsocial[0] += fpair*delx/r; 
-	      	vector_fsocial[1] += fpair*dely/r;
-		}
-		j++;
-	}
-}
 
 
 void calcula_wall_social_force(vector<double> &vector_fsocial,vector<double> &vector_x,
@@ -303,74 +221,6 @@ void calcula_wall_social_force(vector<double> &vector_fsocial,vector<double> &ve
 	vector_fsocial[1]+=fs_y;
 }
 
-void calcula_work_fdesired(vector<int> &vector_id,vector<double> &vector_x,
- vector<double> &vector_y,vector<double> &vector_vx,vector<double> &vector_vy,
- vector<double> &work_fdesired,double vd){
-
-	int id;
-	double xi,yi,vxi,vyi;
-	int n = vector_id.size();
-	for (int i = 0; i < n; ++i){
-		if (esta_en_rectangulo(vector_x[i],vector_y[i])){
-			id = vector_id[i];
-			xi = vector_x[i];
-			yi = vector_y[i];;
-			vxi = vector_vx[i];
-			vyi = vector_vy[i];
-			vector<double> force_desired(2,0.0); // vector Fd para el individuo i 
-			calcula_desired_force(force_desired,xi,yi,vxi,vyi,vd);
-			work_fdesired[id]+=(vector_vx[i]*force_desired[0]+vector_vy[i]*force_desired[1])*TIMESTEP;	
-		}
-	}
-}
-
-
-void calcula_desired_force(vector<double> &force_desired,double xi,
-	double yi,double vxi,double vyi,double vd){
-	/*
-	Calcula la fuerza de deseo para un opening vertical
-	Asume que los individuos van de Izquierda a derecha. 
-	*/
-
-	double dy,rsq,nx,ny,rinv;
-
-  	force_desired[0] = 0.0;
-  	force_desired[1] = 0.0;
-
-	double dx = XTARGET - xi;
-	if (dx> 0){       //significa que no paso por el opening
-		if (yi >= YTARGETDOWN && yi <= YTARGETUP){  // Medio del opening
-			dy = 0.0;
-			rsq = dx*dx;
-			nx = dx/sqrt(rsq);
-			ny = 0.0;
-			force_desired[0] = MOT*(vd*nx - vxi); 
-			force_desired[1] = MOT*(vd*ny - vyi);  
-			
-		}
-		else if (yi < YTARGETDOWN){ //Abajo del opening
-			dy = YTARGETDOWN - yi;
-			rsq = dx*dx + dy*dy;      
-			rinv = 1.0/sqrt(rsq);
-			nx = dx*rinv;
-			ny = dy*rinv;
-			force_desired[0] = MOT*(vd*nx-vxi);  
-			force_desired[1] = MOT*(vd*ny-vyi);  
-			
-		}
-		else {	// Arriba del opening
-			dy = YTARGETUP - yi;
-			rsq = dx*dx + dy*dy;
-			rinv = 1.0/sqrt(rsq);
-			nx = dx*rinv;
-			ny = dy*rinv;
-			force_desired[0] = MOT*(vd*nx-vxi);  
-			force_desired[1] = MOT*(vd*ny-vyi); 
-		}
-	}
-
-}
-
 
 void calcula_work_fgranular(vector<int> &vector_id,vector<double> &vector_x, vector<double> &vector_y,vector<double> &vector_vx,vector<double> &vector_vy,vector<double> &work_fgranular){
 
@@ -380,48 +230,12 @@ void calcula_work_fgranular(vector<int> &vector_id,vector<double> &vector_x, vec
 		if (esta_en_rectangulo(vector_x[i],vector_y[i])){
 			id = vector_id[i];
 			vector<double> vector_fg(2,0.0);
-			calcula_granular_force(vector_fg,vector_x, vector_y, vector_vx,vector_vy, i);
 			calcula_wall_granular_force(vector_fg,vector_x, vector_y, vector_vx,vector_vy, i);			
 			work_fgranular[id]+=(vector_vx[i]*vector_fg[0]+vector_vy[i]*vector_fg[1])*TIMESTEP;	
 		}
 	}
 }
 
-
-void calcula_granular_force(vector<double> &vector_fg,vector<double> &vector_x,
- vector<double> &vector_y, vector<double> &vector_vx,vector<double> &vector_vy,int i){
-   
-	double xi,yi,xj,yj,vxi,vyi,vxj,vyj,delx,dely,delvx,delvy,
-	r,gpair,granular_factor,rsq;
-
-	double sum_rads = DIAM;
-	xi = vector_x[i];
-	yi = vector_y[i];
-	vxi = vector_vx[i];
-	vyi = vector_vy[i];	
-	int j = 0;
-	while(j<(int)vector_x.size()){
-		xj = vector_x[j];
-		yj = vector_y[j];
-		vxj = vector_vx[j];
-		vyj = vector_vy[j];		
-		delx = xi-xj;
-		dely = yi-yj;
-		delvx = vxi - vxj;
-		delvy = vyi - vyj;		
-		
-		rsq = delx*delx+dely*dely;
-
-		if (rsq<(sum_rads*sum_rads) && rsq>0.0 ){
-			r = sqrt(rsq);	
-			gpair = sum_rads - r;
-			granular_factor = KAPPA*gpair*(dely*delvx-delx*delvy)/rsq; 
-	      	vector_fg[0] +=- granular_factor*dely; 
-	      	vector_fg[1] += granular_factor*delx;
-		}
-		j++;
-	}
-}
 
 void calcula_wall_granular_force(vector<double> &vector_fg,vector<double> &vector_x, 
 	vector<double> &vector_y, vector<double> &vector_vx,vector<double> &vector_vy, int i){
@@ -446,36 +260,9 @@ void calcula_wall_granular_force(vector<double> &vector_fg,vector<double> &vecto
 	vector_fg[0]+=fg_x;
 }
 
-void calcula_energia_cinetica(vector<int> &vector_id,vector<double> &vector_vx,
-	vector<double> &vector_vy,vector<double> &kinetic_energy,vector<double> & vector_x,vector<double> & vector_y){
-	/*
-	Acumula la energia cinetica de cada particula (suma Ecin timestep a timestep). 
-	*/
-
-	int id;
-	int n = vector_id.size();
-	for (int i = 0; i < n; ++i){
-		if (esta_en_rectangulo(vector_x[i],vector_y[i])){
-			id = vector_id[i];
-			kinetic_energy[id]+=0.5*MASS*(vector_vx[i]*vector_vx[i]+vector_vy[i]*vector_vy[i]);
-		}
-	}
-}
-
-void calcula_avg_energia_cinetica(vector<double> &avg_kinetic_energy,vector<double> &kinetic_energy,int iter){
-	/*
-	Divide los valores de la energia cinetica por la cantidad de veces que se midio la 
-	energia cinetica (devuelve el promedio de la energia cinetica). 
-	*/
-
-	for (int i = 0; i <  (int) avg_kinetic_energy.size(); ++i){
-		avg_kinetic_energy[i]=kinetic_energy[i]/((double)iter);
-	}
-}
-
 
 void escribir(double mean_density,double std_density,vector<double> &observable1,vector<double> &observable2,vector<double> &observable3,
-	vector<double> &observable4,vector<double> &observable5,string output_file){
+	string output_file){
 
 	char char_output_file[output_file.size() + 1];
 	strcpy(char_output_file, output_file.c_str());	
@@ -483,13 +270,14 @@ void escribir(double mean_density,double std_density,vector<double> &observable1
 	fp=fopen(char_output_file,"a");
 	fprintf(fp, "mean_density\t\tstd_density\n");
 	fprintf(fp, "%.2f\t\t%.2f\n\n",mean_density,std_density);
-	fprintf(fp, "avg_kinetic_energy\t\twork_fgranular\t\twork_fdesired\t\twork_fsocial\t\twork_fcompresion\n");
+	fprintf(fp, "work_fgranular_wall\t\twork_fsocial_wall\t\twork_fcompresion_wall\n");
 	for (int i = 1; i < (int)observable1.size(); ++i){
-		fprintf(fp,"%.2f\t\t%.2f\t\t%.2f\t\t%.2f\t\t%.2f\n",observable1[i],observable2[i],observable3[i],
-			observable4[i],observable5[i]);
+		fprintf(fp,"%.2f\t\t%.2f\t\t%.2f\n",observable1[i],observable2[i],observable3[i]);
 	}
 	fclose(fp);
 }
+
+
 
 bool esta_en_rectangulo(double x, double y){
 	/*
